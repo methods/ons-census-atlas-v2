@@ -26,6 +26,7 @@
     "topojson-client": "^3.1.0"
   },
   "dependencies": {
+    "@ons/design-system": "^42.1.0",
     "d3-scale": "^3.2.3",
     "d3-shape": "^2.0.0",
     "simple-statistics": "^7.4.0"
