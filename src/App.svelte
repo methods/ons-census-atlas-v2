@@ -1,4 +1,5 @@
 <script>
+	import { ladCodes } from './stores.js';
 	import { onMount } from "svelte";
 	import { bbox } from "@turf/turf";
 	import { ckmeans } from 'simple-statistics';
@@ -11,6 +12,7 @@
 	import Loader from "./ui/Loader.svelte";
 	import Select from "./ui/Select.svelte";
 	import { getData, getNomis, getBreaks, getTopo, processData } from "./utils.js";
+
 
 	// CONFIG
 	// const apiurl = "https://www.nomisweb.co.uk/api/v01/dataset/";
@@ -205,7 +207,7 @@
 		} else {
 			// let url = `${apiurl}${selectMeta.table.nomis}${selectMeta.cell}&geography=${geography}&uid=${apikey}`;
 			let url = `https://bothness.github.io/census-atlas/data/lsoa/${selectMeta.code}.csv`;
-			getNomis(url, selectMeta.cell).then((res) => {
+			getNomis(url, ladCodes, selectMeta.cell).then((res) => {
 				let dataset = {
 					lsoa: {},
 					lad: {},
