@@ -1,3 +1,3 @@
 import { writable } from 'svelte/store';
 
-export const ladCodes = writable([]);
+export const geographicCodes = writable([]);

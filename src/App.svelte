@@ -1,5 +1,5 @@
 <script>
-	import { ladCodes } from './stores.js';
+	import { geographicCodes } from './stores.js';
 	import { onMount } from "svelte";
 	import { bbox } from "@turf/turf";
 	import { ckmeans } from 'simple-statistics';
@@ -207,7 +207,7 @@
 		} else {
 			// let url = `${apiurl}${selectMeta.table.nomis}${selectMeta.cell}&geography=${geography}&uid=${apikey}`;
 			let url = `https://bothness.github.io/census-atlas/data/lsoa/${selectMeta.code}.csv`;
-			getNomis(url, ladCodes, selectMeta.cell).then((res) => {
+			getNomis(url, geographicCodes, selectMeta.cell).then((res) => {
 				let dataset = {
 					lsoa: {},
 					lad: {},
