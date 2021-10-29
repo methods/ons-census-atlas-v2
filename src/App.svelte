@@ -5,18 +5,21 @@
 	import { ckmeans } from 'simple-statistics';
 	import Panel from "./Panel.svelte";
 	import Group from "./Group.svelte";
-	import Map from "./Map.svelte";
 	import MapSource from "./MapSource.svelte";
 	import MapLayer from "./MapLayer.svelte";
 	import ColChart from "./charts/Histogram.svelte";
 	import Loader from "./ui/Loader.svelte";
 	import Select from "./ui/Select.svelte";
 	import { getData, getNomis, getBreaks, getTopo, processData } from "./utils.js";
+	import { Router, Link, Route } from "svelte-routing";
+	import DesignSystemApp from "./routes/DesignSystemApp.svelte";
+	import Map from "./routes/Map.svelte"
 
 
 	// CONFIG
 	// const apiurl = "https://www.nomisweb.co.uk/api/v01/dataset/";
 	// const apikey = "0x3cfb19ead752b37bb90da0eb3a0fe78baa9fa055";
+	export let url = "";
 	const geography = "TYPE298";
 	const mapstyle = "https://bothness.github.io/ons-basemaps/data/style-omt.json";
 	const tabledata = "https://bothness.github.io/census-atlas/data/indicators.json";
@@ -379,6 +382,17 @@
 
 	onMount(() => initialise());
 </script>
+
+<Router url="{url}">
+	<nav>
+	  <Link to="/">Map</Link>
+	  <Link to="design">Design System</Link>
+	</nav>
+	<div>
+	  <Route path="design" component="{DesignSystemApp}" />
+	  <Route path="/"><Map /></Route>
+	</div>
+  </Router>
 
 <style>
 	:global(body) {

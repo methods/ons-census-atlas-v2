@@ -1,8 +1,8 @@
 import App from './App.svelte';
-import DesignSystemApp from './DesignSystemApp.svelte'
 
-var app = new DesignSystemApp({
-	target: document.body
+var app = new App({
+	target: document.body,
+  	hydrate: true
 });
 
 export default app;
