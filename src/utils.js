@@ -15,23 +15,11 @@ export async function getTopo(url, layer) {
   return geojson;
 }
 
-export async function getNomis(url, geographicCodesStore, code) {
-    let response = await fetch(url);
-    let string = await response.text();
+export async function getNomis(url, geographicCodesStore, indicatorCode) {
 	if (!geographicCodesStore) {
-		geographicCodesStore = await csvParse(string, (d) => {
-			return d["GEOGRAPHY_CODE"]
-		})
+		geographicCodesStore = await LocalDataService.getGeographicCodes(url)
 	}
-    data = await csvParse(string, (d, index) => {
-      return {
-        code: geographicCodesStore[index],
-        value: +d[code],
-        count: +d["0"],
-        perc: (+d[code] / +d["0"]) * 100,
-      };
-    });
-	return data;
+	return await LocalDataService.getNomisData(url, geographicCodesStore, indicatorCode)
   }
 
 
