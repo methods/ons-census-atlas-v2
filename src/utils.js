@@ -5,7 +5,7 @@ import { get } from 'svelte/store';
 
 const localDataService = new LocalDataService()
 
-export async function getData(url) {
+export async function getLsoaData(url) {
   let response = await fetch(url);
   let string = await response.text();
   let data = await csvParse(string, autoType);

@@ -10,7 +10,7 @@
 	import ColChart from "../charts/Histogram.svelte";
 	import Loader from "../ui/Loader.svelte";
 	import Select from "../ui/Select.svelte";
-	import { getData, getNomis, getBreaks, getTopo, processData } from "../utils.js";
+	import { getLsoaData, getNomis, getBreaks, getTopo, processData } from "../utils.js";
 	import Map from "../Map.svelte"
 
 
@@ -136,8 +136,7 @@
 			})
 			.then((lookup) => {
 				ladlookup = lookup;
-
-				getData(lsoadata)
+				getLsoaData(lsoadata)
 					.then((data) => {
 						let lookup = {};
 						data.forEach((d) => {
