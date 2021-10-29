@@ -1,4 +1,7 @@
-function LocalDataService() {
+import { csvParse } from "d3-dsv";
+import { get } from 'svelte/store';
+
+export default function LocalDataService() {
 
   }
   
@@ -13,9 +16,10 @@ function LocalDataService() {
   LocalDataService.prototype.getNomisData = async function(url, geographicCodesStore, indicatorCode) {
     let response = await fetch(url);
     let string = await response.text();
+    let geoCodes = get(geographicCodesStore)
     return await csvParse(string, (d, index) => {
         return {
-          code: geographicCodesStore[index],
+          code: geoCodes[index],
           value: +d[indicatorCode],
           count: +d["0"],
           perc: (+d[indicatorCode] / +d["0"]) * 100,

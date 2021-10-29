@@ -1,5 +1,9 @@
 import { feature } from "topojson-client";
 import { csvParse, autoType } from "d3-dsv";
+import LocalDataService from "./dataService"
+import { get } from 'svelte/store';
+
+const localDataService = new LocalDataService()
 
 export async function getData(url) {
   let response = await fetch(url);
@@ -16,10 +20,12 @@ export async function getTopo(url, layer) {
 }
 
 export async function getNomis(url, geographicCodesStore, indicatorCode) {
-	if (!geographicCodesStore) {
-		geographicCodesStore = await LocalDataService.getGeographicCodes(url)
+	let geoCodesStore = get(geographicCodesStore)
+	if (geoCodesStore.length == 0) {
+		let geoCodes = await localDataService.getGeographicCodes(url)
+		geographicCodesStore.set(geoCodes)
 	}
-	return await LocalDataService.getNomisData(url, geographicCodesStore, indicatorCode)
+	return await localDataService.getNomisData(url, geographicCodesStore, indicatorCode)
   }
 
 
