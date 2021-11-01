@@ -1,5 +1,5 @@
 <script>
-	import { geographicCodes } from '../stores.js';
+	import { geographicCodes, selectedCategoryTotals, selectedCategory } from '../stores.js';
 	import { onMount } from "svelte";
 	import { bbox } from "@turf/turf";
 	import { ckmeans } from 'simple-statistics';
@@ -12,6 +12,8 @@
 	import Select from "../ui/Select.svelte";
 	import { setsMapLocation,getTableData,assignsLsoasToLads,getIndicators,setSelectedIndicator,ladList, getLsoaData, getNomis, getBreaks, getTopo, processData } from "../utils.js";
 	import Map from "../Map.svelte"
+    import { get } from 'svelte/store';
+    import LocalDataService from "../dataService"
 
 
 	// CONFIG
@@ -83,6 +85,8 @@
 	let mapLoaded = false;
 	let mapZoom = null;
 
+    const localDataService = new LocalDataService()
+
 	// FUNCTIONS
 	function updateURL() {
 		let hash = location.hash;
@@ -107,7 +111,6 @@
 		indicators = await getIndicators(tabledata)
 		selectItem = await getTableData(indicators,selectCode,selectItem)
 	}
-	console.log(mapLocation)
 
 	function setSelect() {
 		if (!(selectMeta && selectItem && selectMeta.code == selectItem.code)) {
@@ -124,14 +127,12 @@
 				table: table,
 				cell: cell,
 			};
-
 			loadData();
 			updateURL();
 		}
 	}
 
-	function loadData() {
-		console.log("loading data...");
+	async function loadData() {
 		loading = true;
 		if (data[selectItem.code]) {
 			selectData = data[selectItem.code];
@@ -142,8 +143,14 @@
 			loading = false;
 		} else {
 			// let url = `${apiurl}${selectMeta.table.nomis}${selectMeta.cell}&geography=${geography}&uid=${apikey}`;
-			let url = `https://bothness.github.io/census-atlas/data/lsoa/${selectMeta.code}.csv`;
-			getNomis(url, geographicCodes, selectMeta.cell).then((res) => {
+            let url = `https://bothness.github.io/census-atlas/data/lsoa/${selectMeta.code}.csv`;
+            let currentCategoryCode = get(selectedCategory)
+            if (currentCategoryCode != selectMeta.code){
+                selectedCategory.set(selectMeta.code)
+                let categoryTotals = await localDataService.getCategoryTotals(url)
+                selectedCategoryTotals.set(categoryTotals)
+            }
+			getNomis(url, localDataService, geographicCodes, selectedCategoryTotals, selectMeta.cell).then((res) => {
 				let dataset = {
 					lsoa: {},
 					lad: {},
@@ -151,7 +158,6 @@
 				};
 				res.sort((a, b) => a.perc - b.perc);
 				dataset.lsoa.data = res;
-
 				let vals = res.map(d => d.perc);
 				let chunks = ckmeans(vals, 5);
 				let breaks = getBreaks(chunks);
@@ -195,7 +201,6 @@
 
 				data[selectItem.code] = dataset;
 				selectData = dataset;
-				console.log("data loaded from csv!");
 				if (active.lad.selected) {
 					setColors();
 				}
@@ -313,255 +318,363 @@
 		});
 	}
 
-	onMount(async () =>{
-		await initialise()
-		} );
+	onMount(async () => await initialise())
 </script>
 
-<style>
-	:global(body) {
-		margin: 0;
-		padding: 0;
-	}
-	h1 {
-		margin-top: 0;
-	}
-	hr {
-		border: none;
-		border-top: 3px solid grey;
-	}
-	#infobox {
-		min-height: 160px;
-		padding-bottom: 18px;
-	}
-	.text-med {
-		font-size: 1.5em;
-		font-weight: bold;
-	}
-	.text-lrg {
-		font-size: 2em;
-		font-weight: bold;
-	}
-	.grid {
-		display: grid;
-		grid-gap: 12px;
-		grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-		justify-items: stretch;
-		width: 100%;
-		margin: 0;
-	}
-	.next {
-		height: 24px;
-		cursor: pointer;
-	}
-</style>
-
 {#if loading}
-	<Loader
-		height="100vh"
-		width="100vw"
-		position="fixed"
-		bgcolor="rgba(255, 255, 255, 0.7)" />
+  <Loader
+    height="100vh"
+    width="100vw"
+    position="fixed"
+    bgcolor="rgba(255, 255, 255, 0.7)"
+  />
 {/if}
 
 <Panel>
-	<h1>2011 Census Atlas Demo</h1>
-	{#if indicators && selectItem}
-		{#if selectData}
-			<ColChart
-				data={selectData.lsoa.data}
-				dataIndex={selectData.lsoa.index}
-				breaks={selectData.lsoa.breaks}
-				avg={selectData.ew.data}
-				selected={active.lsoa.hovered ? active.lsoa.hovered : active.lsoa.selected}
-				parent={active.lad.hovered ? selectData.lad.index[active.lad.hovered].median.code : active.lad.highlighted ? selectData.lad.index[active.lad.highlighted].median.code : active.lad.selected ? selectData.lad.index[active.lad.selected].median.code : null}
-				siblings={active.lad.selected ? ladlookup[active.lad.selected].children : null}
-				key="perc" />
-		{/if}
-		<div id="infobox">
-			{selectMeta.table.name}
-			<small>({selectMeta.table.code})</small><br />
-			<strong class="text-med">{selectItem.name}</strong>
-			<div class="grid">
-				{#if selectData}
-					<div>
-						<hr style="border-top-color: #871A5B" />
-						<strong>England & Wales</strong><br />
-						<strong
-							class="text-lrg">{selectData.ew.data.perc.toFixed(1)}%</strong><br />
-						<small>{selectData.ew.data.value.toLocaleString()}
-							of
-							{selectData.ew.data.count.toLocaleString()}
-							{selectItem.unit.toLowerCase()}s</small>
-					</div>
-					{#if active.lad.hovered || active.lad.highlighted || active.lad.selected}
-						<div>
-							<hr style="border-top-color: #27A0CC" />
-							<strong>{active.lad.hovered ? ladlookup[active.lad.hovered].name : active.lad.highlighted ? ladlookup[active.lad.highlighted].name : ladlookup[active.lad.selected].name}</strong><br />
-							<strong class="text-lrg">
-								{#if active.lad.selected}<img src="./icons/chevron-left.svg" class="next" on:click={() => getSib('lad', -1)}>{/if}
-								{active.lad.hovered ? selectData.lad.index[active.lad.hovered].perc.toFixed(1) : active.lad.highlighted ? selectData.lad.index[active.lad.highlighted].perc.toFixed(1) : selectData.lad.index[active.lad.selected].perc.toFixed(1)}%
-								{#if active.lad.selected}<img src="./icons/chevron-right.svg" class="next" on:click={() => getSib('lad', 1)}>{/if}
-							</strong><br />
-							<small>{active.lad.hovered ? selectData.lad.index[active.lad.hovered].value.toLocaleString() : active.lad.highlighted ? selectData.lad.index[active.lad.highlighted].value.toLocaleString() : selectData.lad.index[active.lad.selected].value.toLocaleString()}
-								of
-								{active.lad.hovered ? selectData.lad.index[active.lad.hovered].count.toLocaleString() : active.lad.highlighted ? selectData.lad.index[active.lad.highlighted].count.toLocaleString() : selectData.lad.index[active.lad.selected].count.toLocaleString()}
-								{selectItem.unit.toLowerCase()}s</small>
-						</div>
-					{:else}
-						<div />
-					{/if}
-					{#if active.lsoa.hovered || active.lsoa.selected}
-						<div>
-							<hr style="border-top-color: #000000" />
-							<strong>{active.lsoa.hovered ? lsoalookup[active.lsoa.hovered].name.slice(-4) : lsoalookup[active.lsoa.selected].name.slice(-4)}</strong><br />
-							<strong class="text-lrg">
-								{#if active.lsoa.selected}<img src="./icons/chevron-left.svg" class="next" on:click={() => getSib('lsoa', -1)}>{/if}
-								{active.lsoa.hovered ? selectData.lsoa.index[active.lsoa.hovered].perc.toFixed(1) : selectData.lsoa.index[active.lsoa.selected].perc.toFixed(1)}%
-								{#if active.lsoa.selected}<img src="./icons/chevron-right.svg" class="next" on:click={() => getSib('lsoa', 1)}>{/if}
-							</strong><br />
-							<small>{active.lsoa.hovered ? selectData.lsoa.index[active.lsoa.hovered].value.toLocaleString() : selectData.lsoa.index[active.lsoa.selected].value.toLocaleString()}
-								of
-								{active.lsoa.hovered ? selectData.lsoa.index[active.lsoa.hovered].count.toLocaleString() : selectData.lsoa.index[active.lsoa.selected].count.toLocaleString()}
-								{selectItem.unit.toLowerCase()}s</small>
-						</div>
-					{:else}
-						<div />
-					{/if}
-				{/if}
-			</div>
-		</div>
+  <h1>2011 Census Atlas Demo</h1>
+  {#if indicators && selectItem}
+    {#if selectData}
+      <ColChart
+        data={selectData.lsoa.data}
+        dataIndex={selectData.lsoa.index}
+        breaks={selectData.lsoa.breaks}
+        avg={selectData.ew.data}
+        selected={active.lsoa.hovered
+          ? active.lsoa.hovered
+          : active.lsoa.selected}
+        parent={active.lad.hovered
+          ? selectData.lad.index[active.lad.hovered].median.code
+          : active.lad.highlighted
+          ? selectData.lad.index[active.lad.highlighted].median.code
+          : active.lad.selected
+          ? selectData.lad.index[active.lad.selected].median.code
+          : null}
+        siblings={active.lad.selected
+          ? ladlookup[active.lad.selected].children
+          : null}
+        key="perc"
+      />
+    {/if}
+    <div id="infobox">
+      {selectMeta.table.name}
+      <small>({selectMeta.table.code})</small><br />
+      <strong class="text-med">{selectItem.name}</strong>
+      <div class="grid">
+        {#if selectData}
+          <div>
+            <hr style="border-top-color: #871A5B" />
+            <strong>England & Wales</strong><br />
+            <strong class="text-lrg"
+              >{selectData.ew.data.perc.toFixed(1)}%</strong
+            ><br />
+            <small
+              >{selectData.ew.data.value.toLocaleString()}
+              of
+              {selectData.ew.data.count.toLocaleString()}
+              {selectItem.unit.toLowerCase()}s</small
+            >
+          </div>
+          {#if active.lad.hovered || active.lad.highlighted || active.lad.selected}
+            <div>
+              <hr style="border-top-color: #27A0CC" />
+              <strong
+                >{active.lad.hovered
+                  ? ladlookup[active.lad.hovered].name
+                  : active.lad.highlighted
+                  ? ladlookup[active.lad.highlighted].name
+                  : ladlookup[active.lad.selected].name}</strong
+              ><br />
+              <strong class="text-lrg">
+                {#if active.lad.selected}<img
+                    src="./icons/chevron-left.svg"
+                    class="next"
+                    on:click={() => getSib("lad", -1)}
+                  />{/if}
+                {active.lad.hovered
+                  ? selectData.lad.index[active.lad.hovered].perc.toFixed(1)
+                  : active.lad.highlighted
+                  ? selectData.lad.index[active.lad.highlighted].perc.toFixed(1)
+                  : selectData.lad.index[active.lad.selected].perc.toFixed(1)}%
+                {#if active.lad.selected}<img
+                    src="./icons/chevron-right.svg"
+                    class="next"
+                    on:click={() => getSib("lad", 1)}
+                  />{/if}
+              </strong><br />
+              <small
+                >{active.lad.hovered
+                  ? selectData.lad.index[
+                      active.lad.hovered
+                    ].value.toLocaleString()
+                  : active.lad.highlighted
+                  ? selectData.lad.index[
+                      active.lad.highlighted
+                    ].value.toLocaleString()
+                  : selectData.lad.index[
+                      active.lad.selected
+                    ].value.toLocaleString()}
+                of
+                {active.lad.hovered
+                  ? selectData.lad.index[
+                      active.lad.hovered
+                    ].count.toLocaleString()
+                  : active.lad.highlighted
+                  ? selectData.lad.index[
+                      active.lad.highlighted
+                    ].count.toLocaleString()
+                  : selectData.lad.index[
+                      active.lad.selected
+                    ].count.toLocaleString()}
+                {selectItem.unit.toLowerCase()}s</small
+              >
+            </div>
+          {:else}
+            <div />
+          {/if}
+          {#if active.lsoa.hovered || active.lsoa.selected}
+            <div>
+              <hr style="border-top-color: #000000" />
+              <strong
+                >{active.lsoa.hovered
+                  ? lsoalookup[active.lsoa.hovered].name.slice(-4)
+                  : lsoalookup[active.lsoa.selected].name.slice(-4)}</strong
+              ><br />
+              <strong class="text-lrg">
+                {#if active.lsoa.selected}<img
+                    src="./icons/chevron-left.svg"
+                    class="next"
+                    on:click={() => getSib("lsoa", -1)}
+                  />{/if}
+                {active.lsoa.hovered
+                  ? selectData.lsoa.index[active.lsoa.hovered].perc.toFixed(1)
+                  : selectData.lsoa.index[active.lsoa.selected].perc.toFixed(
+                      1
+                    )}%
+                {#if active.lsoa.selected}<img
+                    src="./icons/chevron-right.svg"
+                    class="next"
+                    on:click={() => getSib("lsoa", 1)}
+                  />{/if}
+              </strong><br />
+              <small
+                >{active.lsoa.hovered
+                  ? selectData.lsoa.index[
+                      active.lsoa.hovered
+                    ].value.toLocaleString()
+                  : selectData.lsoa.index[
+                      active.lsoa.selected
+                    ].value.toLocaleString()}
+                of
+                {active.lsoa.hovered
+                  ? selectData.lsoa.index[
+                      active.lsoa.hovered
+                    ].count.toLocaleString()
+                  : selectData.lsoa.index[
+                      active.lsoa.selected
+                    ].count.toLocaleString()}
+                {selectItem.unit.toLowerCase()}s</small
+              >
+            </div>
+          {:else}
+            <div />
+          {/if}
+        {/if}
+      </div>
+    </div>
 
-		{#if ladlist}
-			<Select
-				options={ladlist}
-				bind:selected={active.lad.selected}
-				search={true}
-				placeholder="Find a district..."
-				on:select={() => active.lsoa.selected = null} />
-		{/if}
+    {#if ladlist}
+      <Select
+        options={ladlist}
+        bind:selected={active.lad.selected}
+        search={true}
+        placeholder="Find a district..."
+        on:select={() => (active.lsoa.selected = null)}
+      />
+    {/if}
 
-		<Group
-			props={{ name: '2011 Census Tables', children: indicators.slice(0, 8) }}
-			bind:selected={selectItem}
-			expanded />
-	{/if}
+    <Group
+      props={{ name: "2011 Census Tables", children: indicators.slice(0, 8) }}
+      bind:selected={selectItem}
+      expanded
+    />
+  {/if}
 </Panel>
 
 {#if mapLocation}
-<Map bind:map style={mapstyle} minzoom={4} maxzoom={14} bind:zoom={mapZoom} location={mapLocation}>
-	{#if selectData}
-		<MapSource
-			id="lsoa"
-			type="vector"
-			url={lsoabldg.url}
-			layer={lsoabldg.layer}
-			promoteId={lsoabldg.code}
-			maxzoom={13}>
-			<MapLayer
-				id="lsoa"
-				source="lsoa"
-				sourceLayer={lsoabldg.layer}
-				data={selectData}
-				type="fill"
-				paint={{
-					'fill-color': ['case',
-						['!=', ['feature-state', 'color'], null], ['feature-state', 'color'],
-						'rgba(255, 255, 255, 0)'
-					]
-				}}
-				order="tunnel_motorway_casing" />
-		</MapSource>
-		<MapSource
-			id="lsoa-bounds"
-			type="vector"
-			url={lsoabounds.url}
-			layer={lsoabounds.layer}
-			promoteId={lsoabounds.code}
-			minzoom={9}
-			maxzoom={12}>
-			<MapLayer
-				id="lsoa-fill"
-				source="lsoa-bounds"
-				sourceLayer={lsoabounds.layer}
-				type="fill"
-				paint={{ 'fill-color': 'rgba(255, 255, 255, 0)' }}
-				hover={true}
-				bind:hovered={active.lsoa.hovered}
-				click={true}
-				clickCenter={true}
-				bind:selected={active.lsoa.selected} />
-			<MapLayer
-				id="lsoa-bounds"
-				source="lsoa-bounds"
-				sourceLayer={lsoabounds.layer}
-				type="line"
-				paint={{
-					'line-color': ['case',
-						['==', ['feature-state', 'selected'], true], 'rgba(0, 0, 0, 1)',
-						['==', ['feature-state', 'hovered'], true], 'rgba(0, 0, 0, 1)',
-						'rgba(0, 0, 0, 0)'
-					],
-					'line-width': ['case',
-						['==', ['feature-state', 'selected'], true], 2,
-						['==', ['feature-state', 'hovered'], true], 2,
-						0
-					]
-				}} />
-		</MapSource>
-	{/if}
-	{#if ladbounds}
-		<MapSource
-			id="lad"
-			type="vector"
-			url={ladvector.url}
-			layer={ladvector.layer}
-			promoteId={ladvector.code}>
-			<MapLayer
-				id="lad"
-				source="lad"
-				sourceLayer={ladvector.layer}
-				type="line"
-				highlight={true}
-				highlighted={active.lad.highlighted}
-				filter={[
-					"all",
-					["==", "lower", "true"],
-					["in", "country", "E", "W"]
-				]}
-				paint={{
-					'line-color': ['case',
-						['==', ['feature-state', 'selected'], true], '#27A0CC',
-						['==', ['feature-state', 'hovered'], true], '#27A0CC',
-						['==', ['feature-state', 'highlighted'], true], '#27A0CC',
-						'rgba(192, 192, 192, 1)'
-					],
-					'line-width': ['case',
-						['==', ['feature-state', 'selected'], true], 2,
-						['==', ['feature-state', 'hovered'], true], 2,
-						['==', ['feature-state', 'highlighted'], true], 2,
-						0.75
-					]
-				}}
-				order="place_other" />
-			<MapLayer
-				id="lad-fill"
-				source="lad"
-				sourceLayer={ladvector.layer}
-				type="fill"
-				filter={[
-					"all",
-					["==", "lower", "true"],
-					["in", "country", "E", "W"]
-				]}
-				paint={{ 'fill-color': 'rgba(255, 255, 255, 0)' }}
-				hover={true}
-				bind:hovered={active.lad.hovered}
-				click={true}
-				bind:selected={active.lad.selected}
-				maxzoom={8.99}
-				on:select={() => active.lsoa.selected = null} />
-		</MapSource>
-	{/if}
-</Map>
+  <Map
+    bind:map
+    style={mapstyle}
+    minzoom={4}
+    maxzoom={14}
+    bind:zoom={mapZoom}
+    location={mapLocation}
+  >
+    {#if selectData}
+      <MapSource
+        id="lsoa"
+        type="vector"
+        url={lsoabldg.url}
+        layer={lsoabldg.layer}
+        promoteId={lsoabldg.code}
+        maxzoom={13}
+      >
+        <MapLayer
+          id="lsoa"
+          source="lsoa"
+          sourceLayer={lsoabldg.layer}
+          data={selectData}
+          type="fill"
+          paint={{
+            "fill-color": [
+              "case",
+              ["!=", ["feature-state", "color"], null],
+              ["feature-state", "color"],
+              "rgba(255, 255, 255, 0)",
+            ],
+          }}
+          order="tunnel_motorway_casing"
+        />
+      </MapSource>
+      <MapSource
+        id="lsoa-bounds"
+        type="vector"
+        url={lsoabounds.url}
+        layer={lsoabounds.layer}
+        promoteId={lsoabounds.code}
+        minzoom={9}
+        maxzoom={12}
+      >
+        <MapLayer
+          id="lsoa-fill"
+          source="lsoa-bounds"
+          sourceLayer={lsoabounds.layer}
+          type="fill"
+          paint={{ "fill-color": "rgba(255, 255, 255, 0)" }}
+          hover={true}
+          bind:hovered={active.lsoa.hovered}
+          click={true}
+          clickCenter={true}
+          bind:selected={active.lsoa.selected}
+        />
+        <MapLayer
+          id="lsoa-bounds"
+          source="lsoa-bounds"
+          sourceLayer={lsoabounds.layer}
+          type="line"
+          paint={{
+            "line-color": [
+              "case",
+              ["==", ["feature-state", "selected"], true],
+              "rgba(0, 0, 0, 1)",
+              ["==", ["feature-state", "hovered"], true],
+              "rgba(0, 0, 0, 1)",
+              "rgba(0, 0, 0, 0)",
+            ],
+            "line-width": [
+              "case",
+              ["==", ["feature-state", "selected"], true],
+              2,
+              ["==", ["feature-state", "hovered"], true],
+              2,
+              0,
+            ],
+          }}
+        />
+      </MapSource>
+    {/if}
+    {#if ladbounds}
+      <MapSource
+        id="lad"
+        type="vector"
+        url={ladvector.url}
+        layer={ladvector.layer}
+        promoteId={ladvector.code}
+      >
+        <MapLayer
+          id="lad"
+          source="lad"
+          sourceLayer={ladvector.layer}
+          type="line"
+          highlight={true}
+          highlighted={active.lad.highlighted}
+          filter={["all", ["==", "lower", "true"], ["in", "country", "E", "W"]]}
+          paint={{
+            "line-color": [
+              "case",
+              ["==", ["feature-state", "selected"], true],
+              "#27A0CC",
+              ["==", ["feature-state", "hovered"], true],
+              "#27A0CC",
+              ["==", ["feature-state", "highlighted"], true],
+              "#27A0CC",
+              "rgba(192, 192, 192, 1)",
+            ],
+            "line-width": [
+              "case",
+              ["==", ["feature-state", "selected"], true],
+              2,
+              ["==", ["feature-state", "hovered"], true],
+              2,
+              ["==", ["feature-state", "highlighted"], true],
+              2,
+              0.75,
+            ],
+          }}
+          order="place_other"
+        />
+        <MapLayer
+          id="lad-fill"
+          source="lad"
+          sourceLayer={ladvector.layer}
+          type="fill"
+          filter={["all", ["==", "lower", "true"], ["in", "country", "E", "W"]]}
+          paint={{ "fill-color": "rgba(255, 255, 255, 0)" }}
+          hover={true}
+          bind:hovered={active.lad.hovered}
+          click={true}
+          bind:selected={active.lad.selected}
+          maxzoom={8.99}
+          on:select={() => (active.lsoa.selected = null)}
+        />
+      </MapSource>
+    {/if}
+  </Map>
 {/if}
+
+<style>
+  :global(body) {
+    margin: 0;
+    padding: 0;
+  }
+  h1 {
+    margin-top: 0;
+  }
+  hr {
+    border: none;
+    border-top: 3px solid grey;
+  }
+  #infobox {
+    min-height: 160px;
+    padding-bottom: 18px;
+  }
+  .text-med {
+    font-size: 1.5em;
+    font-weight: bold;
+  }
+  .text-lrg {
+    font-size: 2em;
+    font-weight: bold;
+  }
+  .grid {
+    display: grid;
+    grid-gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    justify-items: stretch;
+    width: 100%;
+    margin: 0;
+  }
+  .next {
+    height: 24px;
+    cursor: pointer;
+  }
+</style>
