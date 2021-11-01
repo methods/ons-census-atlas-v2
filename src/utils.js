@@ -2,6 +2,7 @@ import { feature } from "topojson-client";
 import { csvParse, autoType } from "d3-dsv";
 import LocalDataService from "./dataService"
 import { get } from 'svelte/store';
+import { bbox } from "@turf/turf";
 
 const localDataService = new LocalDataService()
 
@@ -17,6 +18,76 @@ export async function getTopo(url, layer) {
   let topojson = await response.json();
   let geojson = await feature(topojson, layer);
   return geojson;
+}
+
+export function setSelectedIndicator(indicators, code,selectItem) {
+	indicators.forEach(indicator => {
+		if (indicator.code && indicator.code == code) {
+			selectItem = indicator;
+		} else if (indicator.children) {
+			setSelectedIndicator(indicator.children, code);
+		}
+	});
+}
+
+export async function ladList (ladbounds,ladtopo,ladlist){
+	      let ladList = {};
+				let list = [];
+				ladbounds.features.forEach((f) => {
+					ladList[f.properties[ladtopo.code]] = {
+						code: f.properties[ladtopo.code],
+						name: f.properties[ladtopo.name]
+					};
+					list.push(ladList[f.properties[ladtopo.code]]);
+				});
+
+				list.sort((a, b) => a.name.localeCompare(b.name));
+				ladlist = list;
+        return ladList
+}
+
+export async function setsMapLocation(ladbounds){
+				let location = ladbounds.features[Math.floor(Math.random() * ladbounds.features.length)];
+				let bounds = bbox(location);
+			let	mapLocation = {
+					zoom: 11,
+					lon: +((bounds[0] + bounds[2]) / 2).toFixed(5),
+					lat: +((bounds[1] + bounds[3]) / 2).toFixed(5)
+				};
+				return mapLocation;
+}
+
+export async function assignsLsoasToLads(lsoasAndLads,ladlookup){
+	let lookup = {};
+	lsoasAndLads.forEach((d) => {
+		lookup[d.code] = {
+			name: d.name,
+			parent: d.parent,
+		};
+
+		if (!ladlookup[d.parent].children) {
+			ladlookup[d.parent].children = [d.code];
+		} else {
+			ladlookup[d.parent].children.push(d.code);
+		}
+	});
+	return lookup;
+					
+
+}
+
+export async function getIndicators(tableDataUrl){
+	let response = await fetch(tableDataUrl);
+	let indicators = await response.json();
+	return indicators
+}
+
+export async function getTableData(indicators,selectCode,selectItem){
+	setSelectedIndicator(indicators, selectCode,selectItem);
+	if (!selectItem) {
+		selectItem = indicators[0].children[0].children[0];
+	}
+	return selectItem
 }
 
 export async function getNomis(url, geographicCodesStore, indicatorCode) {
