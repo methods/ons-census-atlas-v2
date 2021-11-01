@@ -1,19 +1,19 @@
 <script>
-    import "../node_modules/@ons/design-system/css/census.css";
-    import ONSCensusApp from "./ui/ons/ONSCensusApp.svelte"
-    import ONSAccordion from "./ui/ons/ONSAccordion.svelte";
-    import ONSBacklink from "./ui/ons/ONSBacklink.svelte";
-    import ONSBreadcrumbs from "./ui/ons/ONSBreadcrumbs.svelte";
-    import ONSBreadcrumb from "./ui/ons/partials/ONSBreadcrumb.svelte";
-    import ONSButton from "./ui/ons/ONSButton.svelte";
-    import ONSCard from "./ui/ons/ONSCard.svelte";
-    import ONSCheckboxes from "./ui/ons/ONSCheckboxes.svelte";
-    import ONSCheckbox from "./ui/ons/partials/ONSCheckbox.svelte";
-    import ONSCollapsible from "./ui/ons/ONSCollapsible.svelte";
-    import ONSTextField from "./ui/ons/ONSTextField.svelte";
-    import ONSRadios from "./ui/ons/ONSRadios.svelte";
-    import ONSRadio from "./ui/ons/partials/ONSRadio.svelte";
-    import ONSTextArea from "./ui/ons/ONSTextArea.svelte";
+    import "../../node_modules/@ons/design-system/css/census.css"
+    import ONSCensusApp from "../ui/ons/ONSCensusApp.svelte"
+    import ONSAccordion from "../ui/ons/ONSAccordion.svelte";
+    import ONSBacklink from "../ui/ons/ONSBacklink.svelte";
+    import ONSBreadcrumbs from "../ui/ons/ONSBreadcrumbs.svelte";
+    import ONSBreadcrumb from "../ui/ons/partials/ONSBreadcrumb.svelte";
+    import ONSButton from "../ui/ons/ONSButton.svelte";
+    import ONSCard from "../ui/ons/ONSCard.svelte";
+    import ONSCheckboxes from "../ui/ons/ONSCheckboxes.svelte";
+    import ONSCheckbox from "../ui/ons/partials/ONSCheckbox.svelte";
+    import ONSCollapsible from "../ui/ons/ONSCollapsible.svelte";
+    import ONSTextField from "../ui/ons/ONSTextField.svelte";
+    import ONSRadios from "../ui/ons/ONSRadios.svelte";
+    import ONSRadio from "../ui/ons/partials/ONSRadio.svelte";
+    import ONSTextArea from "../ui/ons/ONSTextArea.svelte";
 
     let hint = "This is a hint"
 </script>
