@@ -315,9 +315,7 @@
 
 	onMount(async () =>{
 		await initialise()
-		console.log("mapLocation ",mapLocation)
-		console.log(indicators)
-		console.log(selectItem)} );
+		} );
 </script>
 
 <style>
