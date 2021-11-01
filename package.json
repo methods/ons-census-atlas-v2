@@ -6,14 +6,20 @@
     "build": "rollup -c",
     "dev": "rollup -c -w",
     "start": "sirv public -s",
-    "deploy": "gh-pages -d public"
+    "deploy": "gh-pages -d public",
+    "test": "jest"
   },
   "devDependencies": {
+    "@babel/core": "^7.16.0",
+    "@babel/preset-env": "^7.16.0",
     "@rollup/plugin-commonjs": "^16.0.0",
     "@rollup/plugin-node-resolve": "^10.0.0",
+    "@testing-library/svelte": "^3.0.3",
     "@turf/turf": "latest",
+    "babel-jest": "^27.3.1",
     "d3-dsv": "latest",
     "gh-pages": "^3.1.0",
+    "jest": "^27.3.1",
     "layercake": "^4.0.3",
     "mapbox-gl": "1.13.0",
     "rollup": "^2.3.4",
@@ -23,6 +29,7 @@
     "rollup-plugin-terser": "^7.0.0",
     "sirv-cli": "^1.0.0",
     "svelte": "^3.0.0",
+    "svelte-jester": "^2.1.5",
     "topojson-client": "^3.1.0"
   },
   "dependencies": {

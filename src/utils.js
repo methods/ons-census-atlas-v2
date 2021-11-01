@@ -179,3 +179,7 @@ export function getThresholds(domain, exp, count = 32) {
   }
   return breaks;
 }
+
+export function testFunction() {
+    return true
+}
