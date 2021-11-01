@@ -10,7 +10,7 @@
 	import ColChart from "../charts/Histogram.svelte";
 	import Loader from "../ui/Loader.svelte";
 	import Select from "../ui/Select.svelte";
-	import { getLsoaData, getNomis, getBreaks, getTopo, processData } from "../utils.js";
+	import { setsMapLocation,getTableData,assignsLsoasToLads,getIndicators,setSelectedIndicator,ladList, getLsoaData, getNomis, getBreaks, getTopo, processData } from "../utils.js";
 	import Map from "../Map.svelte"
 
 
@@ -97,79 +97,17 @@
 		history.replaceState(undefined, undefined, hash);
 	}
 
-	function setIndicator(indicators, code) {
-		indicators.forEach(indicator => {
-			if (indicator.code && indicator.code == code) {
-				selectItem = indicator;
-			} else if (indicator.children) {
-				setIndicator(indicator.children, code);
-			}
-		});
+
+	async function initialise() {
+		ladbounds = await getTopo(ladtopo.url, ladtopo.layer)
+		ladlookup = await ladList(ladbounds,ladtopo,ladlist)
+		mapLocation=await setsMapLocation(ladbounds)
+		let lsoasAndLads = await getLsoaData(lsoadata)
+		lsoalookup = await assignsLsoasToLads(lsoasAndLads,ladlookup)
+		indicators = await getIndicators(tabledata)
+		selectItem = await getTableData(indicators,selectCode,selectItem)
 	}
-
-	function initialise() {
-		getTopo(ladtopo.url, ladtopo.layer)
-			.then((geo) => {
-				ladbounds = geo;
-
-				let lookup = {};
-				let list = [];
-				geo.features.forEach((f) => {
-					lookup[f.properties[ladtopo.code]] = {
-						code: f.properties[ladtopo.code],
-						name: f.properties[ladtopo.name]
-					};
-					list.push(lookup[f.properties[ladtopo.code]]);
-				});
-
-				list.sort((a, b) => a.name.localeCompare(b.name));
-				ladlist = list;
-
-				let location = geo.features[Math.floor(Math.random() * geo.features.length)];
-				let bounds = bbox(location);
-				mapLocation = {
-					zoom: 11,
-					lon: +((bounds[0] + bounds[2]) / 2).toFixed(5),
-					lat: +((bounds[1] + bounds[3]) / 2).toFixed(5)
-				};
-				return lookup;
-			})
-			.then((lookup) => {
-				ladlookup = lookup;
-				getLsoaData(lsoadata)
-					.then((data) => {
-						let lookup = {};
-						data.forEach((d) => {
-							lookup[d.code] = {
-								name: d.name,
-								parent: d.parent,
-							};
-
-							if (!ladlookup[d.parent].children) {
-								ladlookup[d.parent].children = [d.code];
-							} else {
-								ladlookup[d.parent].children.push(d.code);
-							}
-						});
-						return lookup;
-					})
-					.then((lookup) => {
-						lsoalookup = lookup;
-
-						fetch(tabledata)
-							.then((res) => res.json())
-							.then((json) => {
-								indicators = json;
-
-								setIndicator(indicators, selectCode);
-
-								if (!selectItem) {
-									selectItem = indicators[0].children[0].children[0];
-								}
-							});
-					});
-			});
-	}
+	console.log(mapLocation)
 
 	function setSelect() {
 		if (!(selectMeta && selectItem && selectMeta.code == selectItem.code)) {
@@ -342,7 +280,7 @@
 
 		if (selectCode != hash[1]) {
 			selectCode = hash[1];
-			setIndicator(indicators, selectCode);
+			setSelectedIndicator(indicators, selectCode);
 		}
 		if (active.lsoa.selected != hash[3]) {
 			active.lsoa.selected = hash[3] != '' ? hash[3] : null;
@@ -375,7 +313,9 @@
 		});
 	}
 
-	onMount(() => initialise());
+	onMount(async () =>{
+		await initialise()
+		} );
 </script>
 
 <style>
