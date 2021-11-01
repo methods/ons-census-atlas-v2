@@ -17,7 +17,7 @@ export async function getTopo(url, layer) {
   return geojson;
 }
 
-export function setSelectedIndicator(indicators, code,selectItem) {
+export function setSelectedIndicator(indicators, code, selectItem) {
 	indicators.forEach(indicator => {
 		if (indicator.code && indicator.code == code) {
 			selectItem = indicator;
