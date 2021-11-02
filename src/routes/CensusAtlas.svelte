@@ -27,6 +27,7 @@
     storeNewCategoryAndTotals,
     populateColors,
     addLadDataToDataset,
+    setColors,
   } from "../utils.js";
   import Map from "../Map.svelte";
   import { get } from "svelte/store";
@@ -106,6 +107,16 @@
 
   const localDataService = new LocalDataService();
 
+  async function initialise() {
+    ladbounds = await getTopo(ladtopo.url, ladtopo.layer);
+    ladlookup = await ladList(ladbounds, ladtopo, ladlist);
+    mapLocation = await setsMapLocation(ladbounds);
+    let lsoasAndLads = await getLsoaData(lsoadata);
+    lsoalookup = await assignsLsoasToLads(lsoasAndLads, ladlookup);
+    indicators = await getIndicators(tabledata);
+    selectItem = await getTableData(indicators, selectCode, selectItem);
+  }
+
   // FUNCTIONS
   function updateURL() {
     let hash = location.hash;
@@ -128,15 +139,7 @@
     history.replaceState(undefined, undefined, hash);
   }
 
-  async function initialise() {
-    ladbounds = await getTopo(ladtopo.url, ladtopo.layer);
-    ladlookup = await ladList(ladbounds, ladtopo, ladlist);
-    mapLocation = await setsMapLocation(ladbounds);
-    let lsoasAndLads = await getLsoaData(lsoadata);
-    lsoalookup = await assignsLsoasToLads(lsoasAndLads, ladlookup);
-    indicators = await getIndicators(tabledata);
-    selectItem = await getTableData(indicators, selectCode, selectItem);
-  }
+
 
   function setSelect() {
     if (!(selectMeta && selectItem && selectMeta.code == selectItem.code)) {
@@ -184,7 +187,7 @@
     data[selectItem.code] = dataset;
     selectData = dataset;
     if (active.lad.selected) {
-      setColors();
+      setColors(data, active, lsoalookup, ladbounds, selectData, selectItem, ladtopo, map);
     }
     loading = false;
   }
@@ -199,34 +202,9 @@
       ) {
         active.lsoa.selected = null;
       }
-      setColors();
+      setColors(data, active, lsoalookup, ladbounds, selectData, selectItem, ladtopo, map);
       updateURL();
     }
-  }
-
-  function setColors() {
-    let newdata = JSON.parse(JSON.stringify(data[selectItem.code]));
-    if (active.lad.selected) {
-      // re-color dataset
-      newdata.lsoa.data.forEach((d) => {
-        if (lsoalookup[d.code].parent == active.lad.selected) {
-          d.fill = d.color;
-          d.selected = true;
-        } else {
-          d.fill = d.muted;
-          d.selected = false;
-        }
-      });
-      // zoom to district on map
-      let geometry = ladbounds.features.find(
-        (f) => f.properties[ladtopo.code] == active.lad.selected
-      ).geometry;
-      let bounds = bbox(geometry);
-      if (!active.lsoa.selected) {
-        map.fitBounds(bounds, { padding: 20 });
-      }
-    }
-    selectData = newdata;
   }
 
   function getSib(type, diff) {

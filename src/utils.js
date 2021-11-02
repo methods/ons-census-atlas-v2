@@ -267,6 +267,31 @@ export function addLadDataToDataset(dataset, lsoalookup, nomisData) {
   dataset.englandAndWales.data = proc.englandAndWales.data;
 }
 
+export function setColors(data, active, lsoalookup, ladbounds, selectData, selectItem, ladtopo, map) {
+  let newdata = JSON.parse(JSON.stringify(data[selectItem.code]));
+  if (active.lad.selected) {
+    // re-color dataset
+    newdata.lsoa.data.forEach((d) => {
+      if (lsoalookup[d.code].parent == active.lad.selected) {
+        d.fill = d.color;
+        d.selected = true;
+      } else {
+        d.fill = d.muted;
+        d.selected = false;
+      }
+    });
+    // zoom to district on map
+    let geometry = ladbounds.features.find(
+      (f) => f.properties[ladtopo.code] == active.lad.selected
+    ).geometry;
+    let bounds = bbox(geometry);
+    if (!active.lsoa.selected) {
+      map.fitBounds(bounds, { padding: 20 });
+    }
+  }
+  selectData = newdata;
+}
+
 export function testFunction() {
   return true;
 }
