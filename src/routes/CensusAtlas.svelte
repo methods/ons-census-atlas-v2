@@ -6,7 +6,6 @@
   } from "../stores.js";
   import { onMount } from "svelte";
   import { bbox } from "@turf/turf";
-  import { ckmeans } from "simple-statistics";
   import Panel from "../Panel.svelte";
   import Group from "../Group.svelte";
   import MapSource from "../MapSource.svelte";
@@ -28,6 +27,8 @@
     populateColors,
     addLadDataToDataset,
     setColors,
+    updateURL,
+    replaceURL,
   } from "../utils.js";
   import Map from "../Map.svelte";
   import { get } from "svelte/store";
@@ -118,30 +119,8 @@
   }
 
   // FUNCTIONS
-  function updateURL() {
-    let hash = location.hash;
-    let newhash = `#/${selectCode}/${
-      active.lad.selected ? active.lad.selected : ""
-    }/${active.lsoa.selected ? active.lsoa.selected : ""}/${mapLocation.zoom},${
-      mapLocation.lon
-    },${mapLocation.lat}`;
-    if (hash != newhash) {
-      history.pushState(undefined, undefined, newhash);
-    }
-  }
 
-  function replaceURL() {
-    let hash = `#/${selectCode}/${
-      active.lad.selected ? active.lad.selected : ""
-    }/${active.lsoa.selected ? active.lsoa.selected : ""}/${mapLocation.zoom},${
-      mapLocation.lon
-    },${mapLocation.lat}`;
-    history.replaceState(undefined, undefined, hash);
-  }
-
-
-
-  function setSelect() {
+  function setSelectedDataset() {
     if (!(selectMeta && selectItem && selectMeta.code == selectItem.code)) {
       let code = selectItem.code;
       let group = indicators.find((d) => d.code == code.slice(0, 3));
@@ -157,7 +136,7 @@
         cell: cell,
       };
       loadData();
-      updateURL();
+      updateURL(location,selectCode,active,mapLocation,history);
     }
   }
 
@@ -203,7 +182,7 @@
         active.lsoa.selected = null;
       }
       setColors(data, active, lsoalookup, ladbounds, selectData, selectItem, ladtopo, map);
-      updateURL();
+      updateURL(location,selectCode,active,mapLocation,history);
     }
   }
 
@@ -272,7 +251,7 @@
     }
   };
 
-  $: selectItem && setSelect(); // Update meta when selection updates
+  $: selectItem && setSelectedDataset(); // Update meta when selection updates
   $: active.lad.highlighted =
     lsoalookup && active.lsoa.hovered
       ? lsoalookup[active.lsoa.hovered].parent
@@ -295,7 +274,7 @@
         lon: center.lng.toFixed(5),
         lat: center.lat.toFixed(5),
       };
-      replaceURL();
+      replaceURL(selectCode,active,mapLocation,history);
     });
   }
 
