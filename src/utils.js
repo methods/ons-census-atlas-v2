@@ -107,7 +107,7 @@ export async function getNomis(
   );
 }
 
-export function processData(dataset, lookup) {
+export function processAggregateData(dataset, lookup) {
   let lsoa = {
     index: {},
   };
@@ -125,8 +125,9 @@ export function processData(dataset, lookup) {
   dataset.forEach((d) =>
     calculateAggregateData(d, lsoa, lookup, lad, ladTemp, englandAndWales)
   );
-  sortLadsByPercentage(lad, ladTemp)
-  englandAndWales.data.perc =(englandAndWales.data.value / englandAndWales.data.count) * 100;
+  sortLadsByPercentage(lad, ladTemp);
+  englandAndWales.data.perc =
+    (englandAndWales.data.value / englandAndWales.data.count) * 100;
   return {
     lsoa: lsoa,
     lad: lad,
@@ -167,8 +168,10 @@ function sortLadsByPercentage(lad, ladTemp) {
 }
 
 function calculateLadPercentages(ladCode, lad, ladTemp) {
-  lad.index[ladCode].perc = (lad.index[ladCode].value / lad.index[ladCode].count) * 100;
-  lad.index[ladCode].median = ladTemp[ladCode][Math.floor(ladTemp[ladCode].length / 2)];
+  lad.index[ladCode].perc =
+    (lad.index[ladCode].value / lad.index[ladCode].count) * 100;
+  lad.index[ladCode].median =
+    ladTemp[ladCode][Math.floor(ladTemp[ladCode].length / 2)];
   lad.data.push(lad.index[ladCode]);
 }
 
@@ -180,7 +183,6 @@ export function getBreaks(chunks) {
   });
 
   breaks.push(chunks[chunks.length - 1][chunks[chunks.length - 1].length - 1]);
-
   return breaks;
 }
 
@@ -198,19 +200,24 @@ export function getThresholds(domain, exp, count = 32) {
   return breaks;
 }
 
-export async function storeNewCategoryAndTotals(selectedCategory,selectedCategoryTotals,selectMeta,localDataService,url){
+export async function storeNewCategoryAndTotals(
+  selectedCategory,
+  selectedCategoryTotals,
+  selectMeta,
+  localDataService,
+  url
+) {
   selectedCategory.set(selectMeta.code);
   let categoryTotals = await localDataService.getCategoryTotals(url);
   selectedCategoryTotals.set(categoryTotals);
 }
 
-export function sortNomisDataByPercentage(nomisData){
+export function sortNomisDataByPercentage(nomisData) {
   nomisData.sort((a, b) => a.perc - b.perc);
 }
 
-
-export function definesDataSet(nomisData,colors){
-  sortNomisDataByPercentage(nomisData)
+export function populateColors(nomisData, colors) {
+  sortNomisDataByPercentage(nomisData);
   let dataset = {
     lsoa: {},
     lad: {},
@@ -221,49 +228,44 @@ export function definesDataSet(nomisData,colors){
   let chunks = ckmeans(vals, 5);
   let breaks = getBreaks(chunks);
   dataset.lsoa.breaks = breaks;
-  dataset.lsoa.data.forEach((d) => {
-        if (d.perc <= breaks[1]) {
-          d.color = colors.base[0];
-          d.muted = colors.muted[0];
-          d.fill = colors.base[0];
-        } else if (d.perc <= breaks[2]) {
-          d.color = colors.base[1];
-          d.muted = colors.muted[1];
-          d.fill = colors.base[1];
-        } else if (d.perc <= breaks[3]) {
-          d.color = colors.base[2];
-          d.muted = colors.muted[2];
-          d.fill = colors.base[2];
-        } else if (d.perc <= breaks[4]) {
-          d.color = colors.base[3];
-          d.muted = colors.muted[3];
-          d.fill = colors.base[3];
-        } else {
-          d.color = colors.base[4];
-          d.muted = colors.muted[4];
-          d.fill = colors.base[4];
-        }
-      });
-
-    return dataset
-
+  dataset.lsoa.data.forEach((d) => assignMapColors(d, colors, breaks));
+  return dataset;
 }
 
-export function addsProccesedDataToDataSet(dataset, lsoalookup, nomisData){
-  let proc = processData(nomisData, lsoalookup);
-      dataset.lsoa.index = proc.lsoa.index;
-
-      dataset.lad.data = proc.lad.data;
-      dataset.lad.index = proc.lad.index;
-
-      let ladVals = proc.lad.data.map((d) => d.perc);
-      let ladChunks = ckmeans(ladVals, 5);
-      dataset.lad.breaks = getBreaks(ladChunks);
-
-      dataset.englandAndWales.data = proc.englandAndWales.data;
-      
+function assignMapColors(d, colors, breaks) {
+  if (d.perc <= breaks[1]) {
+    d.color = colors.base[0];
+    d.muted = colors.muted[0];
+    d.fill = colors.base[0];
+  } else if (d.perc <= breaks[2]) {
+    d.color = colors.base[1];
+    d.muted = colors.muted[1];
+    d.fill = colors.base[1];
+  } else if (d.perc <= breaks[3]) {
+    d.color = colors.base[2];
+    d.muted = colors.muted[2];
+    d.fill = colors.base[2];
+  } else if (d.perc <= breaks[4]) {
+    d.color = colors.base[3];
+    d.muted = colors.muted[3];
+    d.fill = colors.base[3];
+  } else {
+    d.color = colors.base[4];
+    d.muted = colors.muted[4];
+    d.fill = colors.base[4];
+  }
 }
 
+export function addLadDataToDataset(dataset, lsoalookup, nomisData) {
+  let proc = processAggregateData(nomisData, lsoalookup);
+  dataset.lsoa.index = proc.lsoa.index;
+  dataset.lad.data = proc.lad.data;
+  dataset.lad.index = proc.lad.index;
+  let ladVals = proc.lad.data.map((d) => d.perc);
+  let ladChunks = ckmeans(ladVals, 5);
+  dataset.lad.breaks = getBreaks(ladChunks);
+  dataset.englandAndWales.data = proc.englandAndWales.data;
+}
 
 export function testFunction() {
   return true;
