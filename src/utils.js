@@ -2,6 +2,7 @@ import { feature } from "topojson-client";
 import { csvParse, autoType } from "d3-dsv";
 import { get } from "svelte/store";
 import { bbox } from "@turf/turf";
+import { ckmeans } from "simple-statistics";
 
 export async function getLsoaData(url) {
   let response = await fetch(url);
@@ -196,6 +197,73 @@ export function getThresholds(domain, exp, count = 32) {
   }
   return breaks;
 }
+
+export async function storeNewCategoryAndTotals(selectedCategory,selectedCategoryTotals,selectMeta,localDataService,url){
+  selectedCategory.set(selectMeta.code);
+  let categoryTotals = await localDataService.getCategoryTotals(url);
+  selectedCategoryTotals.set(categoryTotals);
+}
+
+export function sortNomisDataByPercentage(nomisData){
+  nomisData.sort((a, b) => a.perc - b.perc);
+}
+
+
+export function definesDataSet(nomisData,colors){
+  sortNomisDataByPercentage(nomisData)
+  let dataset = {
+    lsoa: {},
+    lad: {},
+    englandAndWales: {},
+  };
+  dataset.lsoa.data = nomisData;
+  let vals = nomisData.map((d) => d.perc);
+  let chunks = ckmeans(vals, 5);
+  let breaks = getBreaks(chunks);
+  dataset.lsoa.breaks = breaks;
+  dataset.lsoa.data.forEach((d) => {
+        if (d.perc <= breaks[1]) {
+          d.color = colors.base[0];
+          d.muted = colors.muted[0];
+          d.fill = colors.base[0];
+        } else if (d.perc <= breaks[2]) {
+          d.color = colors.base[1];
+          d.muted = colors.muted[1];
+          d.fill = colors.base[1];
+        } else if (d.perc <= breaks[3]) {
+          d.color = colors.base[2];
+          d.muted = colors.muted[2];
+          d.fill = colors.base[2];
+        } else if (d.perc <= breaks[4]) {
+          d.color = colors.base[3];
+          d.muted = colors.muted[3];
+          d.fill = colors.base[3];
+        } else {
+          d.color = colors.base[4];
+          d.muted = colors.muted[4];
+          d.fill = colors.base[4];
+        }
+      });
+
+    return dataset
+
+}
+
+export function addsProccesedDataToDataSet(dataset, lsoalookup, nomisData){
+  let proc = processData(nomisData, lsoalookup);
+      dataset.lsoa.index = proc.lsoa.index;
+
+      dataset.lad.data = proc.lad.data;
+      dataset.lad.index = proc.lad.index;
+
+      let ladVals = proc.lad.data.map((d) => d.perc);
+      let ladChunks = ckmeans(ladVals, 5);
+      dataset.lad.breaks = getBreaks(ladChunks);
+
+      dataset.englandAndWales.data = proc.englandAndWales.data;
+      
+}
+
 
 export function testFunction() {
   return true;

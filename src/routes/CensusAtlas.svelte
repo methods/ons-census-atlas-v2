@@ -26,6 +26,9 @@
     getBreaks,
     getTopo,
     processData,
+	storeNewCategoryAndTotals,
+	definesDataSet,
+	addsProccesedDataToDataSet,
   } from "../utils.js";
   import Map from "../Map.svelte";
   import { get } from "svelte/store";
@@ -163,71 +166,75 @@
     let url = `https://bothness.github.io/census-atlas/data/lsoa/${selectMeta.code}.csv`;
     let currentCategoryCode = get(selectedCategory);
     if (currentCategoryCode != selectMeta.code) {
-      selectedCategory.set(selectMeta.code);
-      let categoryTotals = await localDataService.getCategoryTotals(url);
-      selectedCategoryTotals.set(categoryTotals);
+		storeNewCategoryAndTotals(selectedCategory,selectedCategoryTotals,selectMeta,localDataService,url)
     }
-    getNomis(
+   let nomisData = await getNomis(
       url,
       localDataService,
       geographicCodes,
       selectedCategoryTotals,
       selectMeta.cell
-    ).then((res) => {
-      let dataset = {
-        lsoa: {},
-        lad: {},
-        englandAndWales: {},
-      };
-      res.sort((a, b) => a.perc - b.perc);
-      dataset.lsoa.data = res;
-      let vals = res.map((d) => d.perc);
-      let chunks = ckmeans(vals, 5);
-      let breaks = getBreaks(chunks);
-      dataset.lsoa.breaks = breaks;
+    )
+	console.log("nomisData", nomisData)
+	let dataset = definesDataSet(nomisData,colors)
+	console.log("newData", dataset)
+	addsProccesedDataToDataSet(dataset, lsoalookup, nomisData)
 
-      dataset.lsoa.data.forEach((d) => {
-        if (d.perc <= breaks[1]) {
-          d.color = colors.base[0];
-          d.muted = colors.muted[0];
-          d.fill = colors.base[0];
-        } else if (d.perc <= breaks[2]) {
-          d.color = colors.base[1];
-          d.muted = colors.muted[1];
-          d.fill = colors.base[1];
-        } else if (d.perc <= breaks[3]) {
-          d.color = colors.base[2];
-          d.muted = colors.muted[2];
-          d.fill = colors.base[2];
-        } else if (d.perc <= breaks[4]) {
-          d.color = colors.base[3];
-          d.muted = colors.muted[3];
-          d.fill = colors.base[3];
-        } else {
-          d.color = colors.base[4];
-          d.muted = colors.muted[4];
-          d.fill = colors.base[4];
-        }
-      });
-      let proc = processData(res, lsoalookup);
-      dataset.lsoa.index = proc.lsoa.index;
+	// .then((res) => {
+    //   let dataset = {
+    //     lsoa: {},
+    //     lad: {},
+    //     englandAndWales: {},
+    //   };
+    //   res.sort((a, b) => a.perc - b.perc);
+    //   dataset.lsoa.data = res;
+    //   let vals = res.map((d) => d.perc);
+    //   let chunks = ckmeans(vals, 5);
+    //   let breaks = getBreaks(chunks);
+    //   dataset.lsoa.breaks = breaks;
 
-      dataset.lad.data = proc.lad.data;
-      dataset.lad.index = proc.lad.index;
+    //   dataset.lsoa.data.forEach((d) => {
+    //     if (d.perc <= breaks[1]) {
+    //       d.color = colors.base[0];
+    //       d.muted = colors.muted[0];
+    //       d.fill = colors.base[0];
+    //     } else if (d.perc <= breaks[2]) {
+    //       d.color = colors.base[1];
+    //       d.muted = colors.muted[1];
+    //       d.fill = colors.base[1];
+    //     } else if (d.perc <= breaks[3]) {
+    //       d.color = colors.base[2];
+    //       d.muted = colors.muted[2];
+    //       d.fill = colors.base[2];
+    //     } else if (d.perc <= breaks[4]) {
+    //       d.color = colors.base[3];
+    //       d.muted = colors.muted[3];
+    //       d.fill = colors.base[3];
+    //     } else {
+    //       d.color = colors.base[4];
+    //       d.muted = colors.muted[4];
+    //       d.fill = colors.base[4];
+    //     }
+    //   });
+    //   let proc = processData(res, lsoalookup);
+    //   dataset.lsoa.index = proc.lsoa.index;
 
-      let ladVals = proc.lad.data.map((d) => d.perc);
-      let ladChunks = ckmeans(ladVals, 5);
-      dataset.lad.breaks = getBreaks(ladChunks);
+    //   dataset.lad.data = proc.lad.data;
+    //   dataset.lad.index = proc.lad.index;
 
-      dataset.englandAndWales.data = proc.englandAndWales.data;
+    //   let ladVals = proc.lad.data.map((d) => d.perc);
+    //   let ladChunks = ckmeans(ladVals, 5);
+    //   dataset.lad.breaks = getBreaks(ladChunks);
 
-      data[selectItem.code] = dataset;
-      selectData = dataset;
-      if (active.lad.selected) {
-        setColors();
-      }
-      loading = false;
-    });
+    //   dataset.englandAndWales.data = proc.englandAndWales.data;
+
+    //   data[selectItem.code] = dataset;
+    //   selectData = dataset;
+    //   if (active.lad.selected) {
+    //     setColors();
+    //   }
+    //   loading = false;
+    // });
   }
 
   function doSelect() {
