@@ -106,7 +106,7 @@ export async function getNomis(
   );
 }
 
-export function processData(data, lookup) {
+export function processData(dataset, lookup) {
   let lsoa = {
     index: {},
   };
@@ -121,17 +121,11 @@ export function processData(data, lookup) {
     },
   };
   let ladTemp = {};
-
-  data.forEach((d) =>
+  dataset.forEach((d) =>
     calculateAggregateData(d, lsoa, lookup, lad, ladTemp, englandAndWales)
   );
-  let keys = Object.keys(lad.index);
-  keys.forEach((key) => calculateLadPercentages(lad, ladTemp, key));
-  lad.data.sort((a, b) => a.perc - b.perc);
-
-  englandAndWales.data.perc =
-    (englandAndWales.data.value / englandAndWales.data.count) * 100;
-
+  sortLadsByPercentage(lad, ladTemp)
+  englandAndWales.data.perc =(englandAndWales.data.value / englandAndWales.data.count) * 100;
   return {
     lsoa: lsoa,
     lad: lad,
@@ -165,10 +159,16 @@ function calculateAggregateData(
   englandAndWales.data.count += lsoaData.count;
 }
 
-function calculateLadPercentages(lad, ladTemp, key) {
-  lad.index[key].perc = (lad.index[key].value / lad.index[key].count) * 100;
-  lad.index[key].median = ladTemp[key][Math.floor(ladTemp[key].length / 2)];
-  lad.data.push(lad.index[key]);
+function sortLadsByPercentage(lad, ladTemp) {
+  let ladCodes = Object.keys(lad.index);
+  ladCodes.forEach((ladCode) => calculateLadPercentages(ladCode, lad, ladTemp));
+  lad.data.sort((a, b) => a.perc - b.perc);
+}
+
+function calculateLadPercentages(ladCode, lad, ladTemp) {
+  lad.index[ladCode].perc = (lad.index[ladCode].value / lad.index[ladCode].count) * 100;
+  lad.index[ladCode].median = ladTemp[ladCode][Math.floor(ladTemp[ladCode].length / 2)];
+  lad.data.push(lad.index[ladCode]);
 }
 
 export function getBreaks(chunks) {
