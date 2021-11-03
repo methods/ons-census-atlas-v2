@@ -1,27 +1,33 @@
-export var ladBoundaries = []
-export var ladList = []
-export var ladLookup = {}
-export var lsoaLookup = {}
+import {writable} from "svelte/store";
+
+export const ladBoundaries = writable([]);
+export const ladList = writable([])
+export const ladLookup = writable({})
+export const lsoaLookup = writable({})
+export const geographyLoading = writable(false)
 
 const LAD_AREA_CODE = "AREACD"
 const LAD_AREA_NAME = "AREANM"
 
 export async function initialiseGeography(geographyService) {
-    ladBoundaries = await geographyService.getLadBoundaries()
-    let lsoaData = await geographyService.getLsoaData();
+    geographyLoading.set(true)
 
-    ladLookup = buildLadLookup(ladBoundaries, lsoaData)
-    lsoaLookup = buildLsoaLookup(lsoaData);
-    ladList = buildLadList(ladBoundaries, ladLookup)
+    ladBoundaries.set(await geographyService.fetchLadBoundaries())
+    let lsoaData = await geographyService.fetchLsoaData();
 
-    return { ladBoundaries, ladLookup, lsoaLookup, ladList }
+    ladLookup.set(buildLadLookup(ladBoundaries, lsoaData))
+    lsoaLookup.set(buildLsoaLookup(lsoaData));
+
+    ladList.set(buildLadList(ladBoundaries, ladLookup))
+
+    geographyLoading.set(false)
 }
 
 export function reset() {
-    ladBoundaries = []
-    ladList = []
-    ladLookup = {}
-    lsoaLookup = {}
+    ladBoundaries.set([])
+    ladList.set([])
+    ladLookup.set({})
+    lsoaLookup.set({})
 }
 
 function buildLadList(ladBounds, ladLookup) {
@@ -54,9 +60,9 @@ function buildLadLookup(ladBounds, lsoaData) {
 
 
 function buildLsoaLookup(lsoaData){
-    lsoaLookup = {};
+    let lookup = {};
     lsoaData.forEach((d) => {
-        lsoaLookup[d.code] = {
+        lookup[d.code] = {
             name: d.name,
             parent: d.parent,
         };

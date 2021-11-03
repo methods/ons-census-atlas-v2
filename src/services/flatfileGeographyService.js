@@ -5,14 +5,14 @@ export default function FlatfileGeographyService() {
 
 }
 
-FlatfileGeographyService.prototype.getLadBoundaries = async function() {
+FlatfileGeographyService.prototype.fetchLadBoundaries = async function() {
     let response = await fetch(url);
     let topojson = await response.json();
     let geojson = await feature(topojson, layer);
     return geojson;
 }
 
-FlatfileGeographyService.prototype.getLsoaData = async function() {
+FlatfileGeographyService.prototype.fetchLsoaData = async function() {
     let response = await fetch(url);
     let string = await response.text();
     let data = await csvParse(string, autoType);

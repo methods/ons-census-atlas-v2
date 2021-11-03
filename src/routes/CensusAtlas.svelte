@@ -30,53 +30,25 @@
   import Map from "../Map.svelte";
   import { get } from "svelte/store";
   import LocalDataService from "../dataService";
+  import {initialiseGeography} from "../stores/geography";
+  import FlatfileGeographyService from "../services/flatfileGeographyService";
 
-  // CONFIG
-  // const apiurl = "https://www.nomisweb.co.uk/api/v01/dataset/";
-  // const apikey = "0x3cfb19ead752b37bb90da0eb3a0fe78baa9fa055";
-  const geography = "TYPE298";
-  const mapstyle =
-    "https://bothness.github.io/ons-basemaps/data/style-omt.json";
-  const tabledata =
-    "https://bothness.github.io/census-atlas/data/indicators.json";
-  const ladtopo = {
-    url: "https://bothness.github.io/census-atlas/data/lad_boundaries_2020.json",
-    layer: "LA2020EW",
-    code: "AREACD",
-    name: "AREANM",
-  };
-  const lsoabldg = {
-    url: "https://cdn.ons.gov.uk/maptiles/buildings/v1/{z}/{x}/{y}.pbf",
-    layer: "buildings",
-    code: "lsoa11cd",
-  };
-  const lsoabounds = {
-    url: "https://cdn.ons.gov.uk/maptiles/administrative/lsoa/v2/boundaries/{z}/{x}/{y}.pbf",
-    layer: "lsoa",
-    code: "areacd",
-  };
-  const ladvector = {
-    url: "https://cdn.ons.gov.uk/maptiles/administrative/authorities/v1/boundaries/{z}/{x}/{y}.pbf",
-    layer: "authority",
-    code: "areacd",
-  };
-  const lsoadata =
-    "https://bothness.github.io/census-atlas/data/lsoa2011_lad2020.csv";
-  const colors = {
-    base: ["#d5f690", "#5bc4b1", "#2e9daa", "#0079a2", "#005583", "#cccccc"],
-    muted: ["#f5fce2", "#d7ede8", "#cbe2e5", "#c2d7e3", "#bdccd9", "#f0f0f0"],
-  };
 
   // OBJECTS
   let map = null;
 
   // DATA
-  let indicators;
+  // census data
+  let indicators; // tree object for indicators
+  let data = {};
+
+  // geography
   let ladbounds;
   let ladlookup;
   let ladlist;
   let lsoalookup;
-  let data = {};
+
+  // active
   let active = {
     lsoa: {
       selected: null,
@@ -90,16 +62,15 @@
       highlighted: null,
     },
   };
+  let selectItem;
+  let selectMeta;
+  let selectData;
+
 
   // STATE
   let selectCode = "QS119EW005";
   let mapLocation = null;
-
-  let selectItem;
-  let selectMeta;
-  let selectData;
   let loading = true;
-
   let mapLoaded = false;
   let mapZoom = null;
 
@@ -128,12 +99,18 @@
   }
 
   async function initialise() {
+    // initialiseGeography(new FlatfileGeographyService())
+    // initialiseCensusData(new FlatfileCensusDataService())
+    // initialiseSelection()
+
     ladbounds = await getTopo(ladtopo.url, ladtopo.layer);
     ladlookup = await ladList(ladbounds, ladtopo, ladlist);
-    mapLocation = await setsMapLocation(ladbounds);
     let lsoasAndLads = await getLsoaData(lsoadata);
     lsoalookup = await assignsLsoasToLads(lsoasAndLads, ladlookup);
+
     indicators = await getIndicators(tabledata);
+
+    mapLocation = await setsMapLocation(ladbounds);
     selectItem = await getTableData(indicators, selectCode, selectItem);
   }
 
@@ -162,11 +139,14 @@
     // let url = `${apiurl}${selectMeta.table.nomis}${selectMeta.cell}&geography=${geography}&uid=${apikey}`;
     let url = `https://bothness.github.io/census-atlas/data/lsoa/${selectMeta.code}.csv`;
     let currentCategoryCode = get(selectedCategory);
-    if (currentCategoryCode != selectMeta.code) {
+    if (currentCategoryCode !== selectMeta.code) {
       selectedCategory.set(selectMeta.code);
       let categoryTotals = await localDataService.getCategoryTotals(url);
       selectedCategoryTotals.set(categoryTotals);
     }
+
+
+
     getNomis(
       url,
       localDataService,

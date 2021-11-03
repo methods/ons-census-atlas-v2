@@ -27,20 +27,20 @@ export function setSelectedIndicator(indicators, code, selectItem) {
 	});
 }
 
-export async function ladList (ladbounds,ladtopo,ladlist){
-	      let ladList = {};
-				let list = [];
-				ladbounds.features.forEach((f) => {
-					ladList[f.properties[ladtopo.code]] = {
-						code: f.properties[ladtopo.code],
-						name: f.properties[ladtopo.name]
-					};
-					list.push(ladList[f.properties[ladtopo.code]]);
-				});
+export async function ladList(ladbounds, ladtopo, ladlist) {
+    let ladList = {};
+    let list = [];
+    ladbounds.features.forEach((f) => {
+        ladList[f.properties[ladtopo.code]] = {
+            code: f.properties[ladtopo.code],
+            name: f.properties[ladtopo.name]
+        };
+        list.push(ladList[f.properties[ladtopo.code]]);
+    });
 
-				list.sort((a, b) => a.name.localeCompare(b.name));
-				ladlist = list;
-        return ladList
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    ladlist = list;
+    return ladList
 }
 
 export async function setsMapLocation(ladbounds){
@@ -69,7 +69,7 @@ export async function assignsLsoasToLads(lsoasAndLads,ladlookup){
 		}
 	});
 	return lookup;
-					
+
 
 }
 
